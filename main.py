@@ -9,11 +9,15 @@ if __name__ == '__main__':
 
     # if students are found
     if student_names:
+        # reading previous data in csv
         curr_date = datetime.date.today()
         f = open('attendance.csv', 'r')
         data = csv.reader(f)
         last_line = f.readlines()[-1]
         last_name, comma, last_date = last_line.partition(',')
+        if last_date == '':
+            last_date = last_name
+            last_name = ''
         f.close()
 
         f = open('attendance.csv', 'a')
