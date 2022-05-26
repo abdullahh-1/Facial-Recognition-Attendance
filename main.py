@@ -1,89 +1,35 @@
-import copy
-import cv2
-import numpy
-import os
-from os import listdir
-from os.path import isfile, join
-from csv import writer
+import csv
 import datetime
+import functions
 
-mypath = 'picture_database'
-only_files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-only_files.pop(0)
-cascPath = 'cascade.xml'
-faceCascade = cv2.CascadeClassifier(cascPath)
 
-video_capture = cv2.VideoCapture(0)
+if __name__ == '__main__':
+    # get students from image
+    student_names = functions.digital_attendance()
 
-student_names = []
+    # if students are found
+    if student_names:
+        curr_date = datetime.date.today()
+        f = open('attendance.csv', 'r')
+        data = csv.reader(f)
+        last_line = f.readlines()[-1]
+        last_name, comma, last_date = last_line.partition(',')
+        f.close()
 
-while True:
-    # Capture frame-by-frame
-    ret, frame = video_capture.read()
+        f = open('attendance.csv', 'a')
+        writer_object = csv.writer(f)
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        for name in student_names:
+            if last_date == curr_date:
+                if functions.search_name(name, data):  # attendance is already marked
+                    exit(0)
+                else:
+                    new_entry = [name, curr_date]
+                    writer_object.writerow(new_entry)
+            else:
+                # new date
+                writer_object.writerow(curr_date)
+                new_entry = [name, curr_date]
+                writer_object.writerow(new_entry)
 
-    faces = faceCascade.detectMultiScale(
-        frame,
-        scaleFactor=1.5,
-        minNeighbors=5,
-        minSize=(30, 30)
-    )
-    # Draw a rectangle around the faces
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-
-    # Display the resulting frame
-    cv2.imshow('Video', frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-
-        img = copy.deepcopy(gray)  # Path of an image
-        faceCascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
-        faces = faceCascade.detectMultiScale(img, 1.1, 4)
-
-        directory = os.getcwd() + r''
-        try:
-            os.mkdir(directory)
-        except FileExistsError as fee:
-            print('Exception Occured', fee)
-        os.chdir(directory)
-        i = 1
-        for (x, y, w, h) in faces:
-            FaceImg = img[y:y + h, x:x + w]
-            # To save an image on disk
-            filename = 'Face' + str(i) + '.jpg'
-            cv2.imwrite(filename, FaceImg)
-            i += 1
-
-            for pic in only_files:
-                pic = "picture_database/" + pic
-                template = cv2.imread(pic, 0)
-
-                w, h = template.shape[::-1]
-                res = cv2.matchTemplate(FaceImg, template, cv2.TM_CCOEFF_NORMED)
-                threshold = 0.7
-
-                loc = numpy.where(res >= threshold)
-                if len(loc[0]) > 0:
-                    student_name = pic[:-5]
-                    student_name = student_name[17:]
-                    student_names.append(student_name)
-                    print(filename, student_name)
-
-                for pt in zip(*loc[::-1]):
-                    cv2.rectangle(gray, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-                cv2.imwrite('res.png', gray)
-                cv2.imshow('Video', gray)
-                video_capture.release()
-                cv2.destroyAllWindows()
-
-        break
-
-if student_names:
-    for name in student_names:
-        new_entry = [name, datetime.datetime.now()]
-        with open('attendance.csv', 'a') as f_object:
-            writer_object = writer(f_object)
-            writer_object.writerow(new_entry)
-            f_object.close()
+        f.close()
