@@ -17,7 +17,7 @@ def search_name(name, sheet):
 def digital_attendance():
     mypath = 'picture_database'
     only_files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-    only_files.pop(0)
+    only_files.remove('.DS_Store')
     cascPath = 'cascade.xml'
     faceCascade = cv2.CascadeClassifier(cascPath)
     video_capture = cv2.VideoCapture(0)
@@ -44,7 +44,7 @@ def digital_attendance():
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
 
-            img = copy.deepcopy(gray)  # Path of an image
+            img = copy.deepcopy(frame)  # Path of an image
             faceCascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
             faces = faceCascade.detectMultiScale(img, 1.1, 4)
 
@@ -64,13 +64,15 @@ def digital_attendance():
                 cv2.imwrite(filename, FaceImg)
                 i += 1
 
+                FaceImg = cv2.cvtColor(FaceImg, cv2.COLOR_BGR2GRAY)
+
                 for pic in only_files:
                     pic = "picture_database/" + pic
                     template = cv2.imread(pic, 0)
 
                     w, h = template.shape[::-1]
                     res = cv2.matchTemplate(FaceImg, template, cv2.TM_CCOEFF_NORMED)
-                    threshold = 0.7
+                    threshold = 0.6
 
                     loc = numpy.where(res >= threshold)
                     if len(loc[0]) > 0:
